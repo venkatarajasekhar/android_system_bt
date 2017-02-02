@@ -38,7 +38,7 @@ typedef struct _bt_device_class_t {
 COMPILE_ASSERT(sizeof(_bt_device_class_t) == sizeof(bt_device_class_t));
 
 // [Major Service Classes](https://www.bluetooth.org/en-us/specification/assigned-numbers/baseband)
-enum {
+typedef enum {
   DC_LIMITED_DISCOVERABLE_MODE = 0x0001,
   DC_RESERVED14 = 0x0002,
   DC_RESERVED15 = 0x0004,
@@ -50,7 +50,7 @@ enum {
   DC_AUDIO = 0x0100,
   DC_TELEPHONY = 0x0200,
   DC_INFORMATION = 0x0400,
-};
+}E_Baseband;
 
 static bool device_class_get_major_service_(const bt_device_class_t *dc, int bitmask);
 static void device_class_clr_major_service_(bt_device_class_t *dc, int bitmask);

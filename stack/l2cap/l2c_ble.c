@@ -46,25 +46,25 @@ static void l2cble_start_conn_update (tL2C_LCB *p_lcb);
 **  Return value:   TRUE if connection was cancelled
 **
 *******************************************************************************/
-BOOLEAN L2CA_CancelBleConnectReq (BD_ADDR rem_bda)
+BOOLEAN L2CA_CancelBleConnectReq (BD_ADDR *rem_bda)
 {
-    tL2C_LCB *p_lcb;
+    tL2C_LCB *p_lcb = NULL;
 
     /* There can be only one BLE connection request outstanding at a time */
     if (btm_ble_get_conn_st() == BLE_CONN_IDLE)
     {
         L2CAP_TRACE_WARNING ("L2CA_CancelBleConnectReq - no connection pending");
-        return(FALSE);
+        return FALSE;
     }
 
-    if (memcmp (rem_bda, l2cb.ble_connecting_bda, BD_ADDR_LEN))
+    if (memcmp (rem_bda, &l2cb.ble_connecting_bda, BD_ADDR_LEN))
     {
         L2CAP_TRACE_WARNING ("L2CA_CancelBleConnectReq - different  BDA Connecting: %08x%04x  Cancel: %08x%04x",
                               (l2cb.ble_connecting_bda[0]<<24)+(l2cb.ble_connecting_bda[1]<<16)+(l2cb.ble_connecting_bda[2]<<8)+l2cb.ble_connecting_bda[3],
                               (l2cb.ble_connecting_bda[4]<<8)+l2cb.ble_connecting_bda[5],
                               (rem_bda[0]<<24)+(rem_bda[1]<<16)+(rem_bda[2]<<8)+rem_bda[3], (rem_bda[4]<<8)+rem_bda[5]);
 
-        return(FALSE);
+        return FALSE;
     }
 
     if (btsnd_hcic_ble_create_conn_cancel())
@@ -80,10 +80,10 @@ BOOLEAN L2CA_CancelBleConnectReq (BD_ADDR rem_bda)
         /* update state to be cancel, wait for connection cancel complete */
         btm_ble_set_conn_st (BLE_CONN_CANCEL);
 
-        return(TRUE);
+        return TRUE;
     }
     else
-        return(FALSE);
+        return FALSE;
 }
 
 /*******************************************************************************
@@ -97,10 +97,10 @@ BOOLEAN L2CA_CancelBleConnectReq (BD_ADDR rem_bda)
 **  Return value:   TRUE if update started
 **
 *******************************************************************************/
-BOOLEAN L2CA_UpdateBleConnParams (BD_ADDR rem_bda, UINT16 min_int, UINT16 max_int,
+BOOLEAN L2CA_UpdateBleConnParams (BD_ADDR *rem_bda, UINT16 min_int, UINT16 max_int,
                                             UINT16 latency, UINT16 timeout)
 {
-    tL2C_LCB            *p_lcb;
+    tL2C_LCB            *p_lcb = NULL;
     tACL_CONN           *p_acl_cb = btm_bda_to_acl(rem_bda, BT_TRANSPORT_LE);
 
     /* See if we have a link control block for the remote device */
@@ -120,7 +120,7 @@ BOOLEAN L2CA_UpdateBleConnParams (BD_ADDR rem_bda, UINT16 min_int, UINT16 max_in
         L2CAP_TRACE_WARNING ("L2CA_UpdateBleConnParams - BD_ADDR %08x%04x not LE",
                               (rem_bda[0]<<24)+(rem_bda[1]<<16)+(rem_bda[2]<<8)+rem_bda[3],
                               (rem_bda[4]<<8)+rem_bda[5]);
-        return(FALSE);
+        return FALSE;
     }
 
     p_lcb->min_interval = min_int;
@@ -131,7 +131,7 @@ BOOLEAN L2CA_UpdateBleConnParams (BD_ADDR rem_bda, UINT16 min_int, UINT16 max_in
 
     l2cble_start_conn_update(p_lcb);
 
-    return(TRUE);
+    return TRUE;
 }
 
 
@@ -146,9 +146,9 @@ BOOLEAN L2CA_UpdateBleConnParams (BD_ADDR rem_bda, UINT16 min_int, UINT16 max_in
 **  Return value:   TRUE if update started
 **
 *******************************************************************************/
-BOOLEAN L2CA_EnableUpdateBleConnParams (BD_ADDR rem_bda, BOOLEAN enable)
+BOOLEAN L2CA_EnableUpdateBleConnParams (BD_ADDR *rem_bda, BOOLEAN enable)
 {
-    tL2C_LCB            *p_lcb;
+    tL2C_LCB            *p_lcb = NULL;
 
     /* See if we have a link control block for the remote device */
     p_lcb = l2cu_find_lcb_by_bd_addr (rem_bda, BT_TRANSPORT_LE);
@@ -158,7 +158,7 @@ BOOLEAN L2CA_EnableUpdateBleConnParams (BD_ADDR rem_bda, BOOLEAN enable)
         L2CAP_TRACE_WARNING ("L2CA_EnableUpdateBleConnParams - unknown BD_ADDR %08x%04x",
             (rem_bda[0]<<24)+(rem_bda[1]<<16)+(rem_bda[2]<<8)+rem_bda[3],
             (rem_bda[4]<<8)+rem_bda[5]);
-        return (FALSE);
+        return FALSE;
     }
 
     L2CAP_TRACE_API ("%s - BD_ADDR %08x%04x enable %d current upd state 0x%02x",__FUNCTION__,
@@ -170,7 +170,7 @@ BOOLEAN L2CA_EnableUpdateBleConnParams (BD_ADDR rem_bda, BOOLEAN enable)
         L2CAP_TRACE_WARNING ("%s - BD_ADDR %08x%04x not LE (link role %d)", __FUNCTION__,
                               (rem_bda[0]<<24)+(rem_bda[1]<<16)+(rem_bda[2]<<8)+rem_bda[3],
                               (rem_bda[4]<<8)+rem_bda[5], p_lcb->link_role);
-        return (FALSE);
+        return FALSE;
     }
 
     if (enable)
@@ -180,7 +180,7 @@ BOOLEAN L2CA_EnableUpdateBleConnParams (BD_ADDR rem_bda, BOOLEAN enable)
 
     l2cble_start_conn_update(p_lcb);
 
-    return (TRUE);
+    return TRUE;
 }
 
 
@@ -193,11 +193,11 @@ BOOLEAN L2CA_EnableUpdateBleConnParams (BD_ADDR rem_bda, BOOLEAN enable)
 ** Returns          link role.
 **
 *******************************************************************************/
-UINT8 L2CA_GetBleConnRole (BD_ADDR bd_addr)
+UINT8 L2CA_GetBleConnRole (BD_ADDR *bd_addr)
 {
     UINT8       role = HCI_ROLE_UNKNOWN;
 
-    tL2C_LCB *p_lcb;
+    tL2C_LCB *p_lcb = NULL;
 
     if ((p_lcb = l2cu_find_lcb_by_bd_addr (bd_addr, BT_TRANSPORT_LE)) != NULL)
         role = p_lcb->link_role;
@@ -213,9 +213,9 @@ UINT8 L2CA_GetBleConnRole (BD_ADDR bd_addr)
 ** Returns          disconnect reason
 **
 *******************************************************************************/
-UINT16 L2CA_GetDisconnectReason (BD_ADDR remote_bda, tBT_TRANSPORT transport)
+UINT16 L2CA_GetDisconnectReason (BD_ADDR *remote_bda, tBT_TRANSPORT transport)
 {
-    tL2C_LCB            *p_lcb;
+    tL2C_LCB            *p_lcb = NULL;
     UINT16              reason = 0;
 
     if ((p_lcb = l2cu_find_lcb_by_bd_addr (remote_bda, transport)) != NULL)
@@ -235,12 +235,12 @@ UINT16 L2CA_GetDisconnectReason (BD_ADDR remote_bda, tBT_TRANSPORT transport)
 ** Returns none
 **
 *******************************************************************************/
-void l2cble_notify_le_connection (BD_ADDR bda)
+void l2cble_notify_le_connection (BD_ADDR *bda)
 {
     tL2C_LCB *p_lcb = l2cu_find_lcb_by_bd_addr (bda, BT_TRANSPORT_LE);
     tACL_CONN *p_acl = btm_bda_to_acl(bda, BT_TRANSPORT_LE) ;
 
-    if (p_lcb != NULL && p_acl != NULL && p_lcb->link_state != LST_CONNECTED)
+    if ((p_lcb != NULL) && (p_acl != NULL) && (p_lcb->link_state != LST_CONNECTED))
     {
         /* update link status */
         btm_establish_continue(p_acl);
@@ -260,11 +260,11 @@ void l2cble_notify_le_connection (BD_ADDR bda)
 ** Returns          void
 **
 *******************************************************************************/
-void l2cble_scanner_conn_comp (UINT16 handle, BD_ADDR bda, tBLE_ADDR_TYPE type,
+void l2cble_scanner_conn_comp (UINT16 handle, BD_ADDR *bda, tBLE_ADDR_TYPE type,
                                UINT16 conn_interval, UINT16 conn_latency, UINT16 conn_timeout)
 {
     int i;
-    tL2C_LCB            *p_lcb;
+    tL2C_LCB            *p_lcb = NULL;
     tBTM_SEC_DEV_REC    *p_dev_rec = btm_find_or_alloc_dev (bda);
 
     L2CAP_TRACE_DEBUG ("l2cble_scanner_conn_comp: HANDLE=%d addr_type=%d conn_interval=%d slave_latency=%d supervision_tout=%d",
@@ -369,12 +369,12 @@ void l2cble_scanner_conn_comp (UINT16 handle, BD_ADDR bda, tBLE_ADDR_TYPE type,
 ** Returns          void
 **
 *******************************************************************************/
-void l2cble_advertiser_conn_comp (UINT16 handle, BD_ADDR bda, tBLE_ADDR_TYPE type,
+void l2cble_advertiser_conn_comp (UINT16 handle, BD_ADDR *bda, tBLE_ADDR_TYPE type,
                                   UINT16 conn_interval, UINT16 conn_latency, UINT16 conn_timeout)
 {
     int i;
-    tL2C_LCB            *p_lcb;
-    tBTM_SEC_DEV_REC    *p_dev_rec;
+    tL2C_LCB            *p_lcb = NULL;
+    tBTM_SEC_DEV_REC    *p_dev_rec = NULL;
     UNUSED(type);
     UNUSED(conn_interval);
     UNUSED(conn_latency);
@@ -451,7 +451,7 @@ void l2cble_advertiser_conn_comp (UINT16 handle, BD_ADDR bda, tBLE_ADDR_TYPE typ
 ** Returns          void
 **
 *******************************************************************************/
-void l2cble_conn_comp(UINT16 handle, UINT8 role, BD_ADDR bda, tBLE_ADDR_TYPE type,
+void l2cble_conn_comp(UINT16 handle, UINT8 role, BD_ADDR *bda, tBLE_ADDR_TYPE type,
                       UINT16 conn_interval, UINT16 conn_latency, UINT16 conn_timeout)
 {
     btm_ble_update_link_topology_mask(role, TRUE);
@@ -483,7 +483,8 @@ static void l2cble_start_conn_update (tL2C_LCB *p_lcb)
     tBTM_SEC_DEV_REC *p_dev_rec = btm_find_or_alloc_dev(p_lcb->remote_bd_addr);
     tACL_CONN *p_acl_cb = btm_bda_to_acl(p_lcb->remote_bd_addr, BT_TRANSPORT_LE);
 
-    if (p_lcb->conn_update_mask & L2C_BLE_UPDATE_PENDING) return;
+    if (p_lcb->conn_update_mask & L2C_BLE_UPDATE_PENDING) 
+        return;
 
     if (p_lcb->conn_update_mask & L2C_BLE_CONN_UPDATE_DISABLE)
     {
@@ -559,7 +560,7 @@ static void l2cble_start_conn_update (tL2C_LCB *p_lcb)
 *******************************************************************************/
 void l2cble_process_conn_update_evt (UINT16 handle, UINT8 status)
 {
-    tL2C_LCB *p_lcb;
+    tL2C_LCB *p_lcb = NULL;
 
     L2CAP_TRACE_DEBUG("l2cble_process_conn_update_evt");
 
@@ -594,7 +595,7 @@ void l2cble_process_conn_update_evt (UINT16 handle, UINT8 status)
 *******************************************************************************/
 void l2cble_process_sig_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
 {
-    UINT8           *p_pkt_end;
+    UINT8           *p_pkt_end = NULL;
     UINT8           cmd_code, id;
     UINT16          cmd_len;
     UINT16          min_interval, max_interval, latency, timeout;
@@ -685,10 +686,10 @@ void l2cble_process_sig_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
 BOOLEAN l2cble_init_direct_conn (tL2C_LCB *p_lcb)
 {
     tBTM_SEC_DEV_REC *p_dev_rec = btm_find_or_alloc_dev (p_lcb->remote_bd_addr);
-    tBTM_BLE_CB *p_cb = &btm_cb.ble_ctr_cb;
-    UINT16 scan_int;
-    UINT16 scan_win;
-    BD_ADDR peer_addr;
+    tBTM_BLE_CB *p_cb = (tBTM_BLE_CB *)&btm_cb.ble_ctr_cb;
+    UINT16 scan_int = 0;
+    UINT16 scan_win = 0;
+    BD_ADDR *peer_addr = NULL ;
     UINT8 peer_addr_type = BLE_ADDR_PUBLIC;
     UINT8 own_addr_type = BLE_ADDR_PUBLIC;
 
@@ -696,7 +697,7 @@ BOOLEAN l2cble_init_direct_conn (tL2C_LCB *p_lcb)
     if (p_dev_rec == NULL)
     {
         L2CAP_TRACE_WARNING ("unknown device, can not initate connection");
-        return(FALSE);
+        return FALSE;
     }
 
     scan_int = (p_cb->scan_int == BTM_BLE_SCAN_PARAM_UNDEF) ? BTM_BLE_SCAN_FAST_INT : p_cb->scan_int;
@@ -745,17 +746,17 @@ BOOLEAN l2cble_init_direct_conn (tL2C_LCB *p_lcb)
     {
         l2cu_release_lcb (p_lcb);
         L2CAP_TRACE_ERROR("initate direct connection fail, no resources");
-        return (FALSE);
+        return FALSE;
     }
     else
     {
         p_lcb->link_state = LST_CONNECTING;
         l2cb.is_ble_connecting = TRUE;
-        memcpy (l2cb.ble_connecting_bda, p_lcb->remote_bd_addr, BD_ADDR_LEN);
+        memcpy (&l2cb.ble_connecting_bda, p_lcb->remote_bd_addr, BD_ADDR_LEN);
         btu_start_timer (&p_lcb->timer_entry, BTU_TTYPE_L2CAP_LINK, L2CAP_BLE_LINK_CONNECT_TOUT);
         btm_ble_set_conn_st (BLE_DIR_CONN);
 
-        return (TRUE);
+        return TRUE;
     }
 }
 
@@ -832,7 +833,7 @@ void l2c_link_processs_ble_num_bufs (UINT16 num_lm_ble_bufs)
 void l2c_ble_link_adjust_allocation (void)
 {
     UINT16      qq, yy, qq_remainder;
-    tL2C_LCB    *p_lcb;
+    tL2C_LCB    *p_lcb = NULL;
     UINT16      hi_quota, low_quota;
     UINT16      num_lowpri_links = 0;
     UINT16      num_hipri_links  = 0;
